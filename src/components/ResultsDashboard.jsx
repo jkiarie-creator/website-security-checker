@@ -20,6 +20,16 @@ const ResultsDashboard = ({ results = [] }) => {
     <div className="space-y-8 p-6">
       {severityOrder.map((severity) => {
         const issues = groupedIssues[severity] || [];
+        
+        if (results.length === 0) {
+          return (
+            <div key="no-results" className="text-center py-12">
+              <h2 className="text-2xl font-semibold text-gray-600">No scan results available</h2>
+              <p className="text-gray-500 mt-2">Run a scan to see security issues</p>
+            </div>
+          );
+        }
+
         if (issues.length === 0) return null;
 
         return (

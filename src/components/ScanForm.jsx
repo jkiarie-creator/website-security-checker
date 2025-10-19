@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from 'prop-types';
 import ProgressBar from './ProgressBar';
+import TestIssueCard from "../pages/TestResultsDashboard";
 
 const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
   const [url, setUrl] = useState("");
@@ -116,6 +117,7 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
       {scanning && (
         <div className="mt-8">
           <ProgressBar progress={scanProgress} />
+          <p className="mt-2 text-gray-400 text-sm text-center">Scanning in progress...</p>
         </div>
       )}
     </div>

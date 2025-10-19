@@ -40,3 +40,17 @@
 .read-the-docs {
   color: #888;
 }
+
+@keyframes scan {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
