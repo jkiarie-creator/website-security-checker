@@ -3,16 +3,13 @@ import PropTypes from 'prop-types';
 import IssueCard from './IssueCard';
 
 const ResultsDashboard = ({ results = [] }) => {
-  // Group issues by severity (normalize to lowercase)
+  // Group issues by severity
   const groupedIssues = results.reduce((acc, issue) => {
     const severity = issue.severity.toLowerCase();
-    // Create a new issue object with normalized severity
-    const normalizedIssue = { ...issue, severity };
-    
     if (!acc[severity]) {
       acc[severity] = [];
     }
-    acc[severity].push(normalizedIssue);
+    acc[severity].push(issue);
     return acc;
   }, {});
 

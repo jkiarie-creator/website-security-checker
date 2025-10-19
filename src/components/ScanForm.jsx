@@ -3,11 +3,14 @@ import PropTypes from 'prop-types';
 import ProgressBar from './ProgressBar';
 import TestIssueCard from "../pages/TestResultsDashboard";
 
-const ScanForm = ({ onStartScan }) => {
+const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  
+  // Use external isScanning if provided, otherwise use local state
+  const scanning = externalIsScanning !== undefined ? externalIsScanning : isScanning;
 
   // URL validation function
   const isValidUrl = (urlString) => {
@@ -73,7 +76,7 @@ const ScanForm = ({ onStartScan }) => {
               setUrl(e.target.value);
               setError("");
             }}
-            disabled={isScanning}
+            disabled={scanning}
             placeholder="https://example.com"
             className={`w-full px-4 py-3 rounded-lg bg-gray-800 text-white border-2 
                       ${error ? 'border-red-500 focus:border-red-500' : 'border-gray-700 focus:border-cyan-500'} 
@@ -97,21 +100,21 @@ const ScanForm = ({ onStartScan }) => {
         {/* Submit button with loading state */}
         <button 
           type="submit"
-          disabled={isScanning}
+          disabled={scanning}
           className={`w-full md:w-auto px-6 py-3 rounded-lg font-orbitron font-semibold
                     transition-all duration-200 ease-in-out
-                    ${isScanning 
+                    ${scanning 
                       ? 'bg-gray-600 cursor-not-allowed' 
                       : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:shadow-lg hover:shadow-cyan-500/25'
                     } 
                     text-white`}
         >
-          {isScanning ? 'Scanning...' : 'Start Security Scan'}
+          {scanning ? 'Scanning...' : 'Start Security Scan'}
         </button>
       </form>
 
       {/* Progress bar */}
-      {isScanning && (
+      {scanning && (
         <div className="mt-8">
           <ProgressBar progress={scanProgress} />
           <p className="mt-2 text-gray-400 text-sm text-center">Scanning in progress...</p>
@@ -123,6 +126,7 @@ const ScanForm = ({ onStartScan }) => {
 
 ScanForm.propTypes = {
   onStartScan: PropTypes.func.isRequired,
+  isScanning: PropTypes.bool,
 };
 
 export default ScanForm;
