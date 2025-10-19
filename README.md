@@ -1,5 +1,5 @@
 <div align="center">
-  <h1 align="center">🛡️ Website Security Scanner</h1>
+  <h1 align="center">🛡️ Website Security Checker</h1>
   <p align="center">
     A modern web application for automated security scanning powered by OWASP ZAP
     <br />
