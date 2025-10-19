@@ -68,16 +68,42 @@ const checkSpiderProgress = async (scanId) => {
 // Start active scan
 const startActiveScan = async (targetUrl, params = { url: targetUrl }) => {
   try {
+    // Ensure we have all required parameters with defaults
+    const scanParams = {
+      url: targetUrl,
+      recurse: 'false',
+      inScopeOnly: 'false',
+      scanPolicyName: 'Default Policy',
+      method: 'GET',
+      postData: '',
+      contextId: '',
+      ...params
+    };
+
+    console.log('Sending active scan request with params:', scanParams);
+    
     const response = await zapApi.get('/zap/JSON/ascan/action/scan', {
-      params: {
-        url: targetUrl,
-        ...params
-      }
+      params: scanParams,
+      timeout: 30000 // 30 second timeout for starting the scan
     });
+    
+    if (!response.data || !response.data.scan) {
+      throw new Error('Invalid response from ZAP API when starting active scan');
+    }
+    
     return response.data.scan;
   } catch (error) {
     console.error('Active scan failed to start:', error);
-    throw new Error(`Failed to start active scan: ${extractAxiosError(error)}`);
+    
+    // Try to get more detailed error information
+    let errorDetails = extractAxiosError(error);
+    
+    // If it's a 404, the URL might not be in the scan tree
+    if (error.response && error.response.status === 404) {
+      errorDetails += ' (URL not found in scan tree. Make sure to access the URL through ZAP first)';
+    }
+    
+    throw new Error(`Failed to start active scan: ${errorDetails}`);
   }
 };
 
@@ -102,14 +128,85 @@ const checkActiveScanProgress = async (scanId) => {
 // Get scan results
 const getScanResults = async (targetUrl) => {
   try {
+    console.log('Fetching alerts for URL:', targetUrl);
     const response = await zapApi.get('/zap/JSON/core/view/alerts', {
-      params: { baseurl: targetUrl },
-      timeout: 10000 // 10 second timeout
+      params: { 
+        baseurl: targetUrl, 
+        start: 0, 
+        count: 1000, // Increased limit to get all alerts
+        riskId: '1,2,3' // Get all risk levels (High, Medium, Low)
+      },
+      timeout: 15000 // Increased timeout
     });
-    return response.data.alerts || [];
+    
+    if (!response.data || !response.data.alerts) {
+      console.warn('No alerts found in response:', response.data);
+      return [];
+    }
+    
+    console.log(`Found ${response.data.alerts.length} security alerts`);
+    return response.data.alerts;
   } catch (error) {
     console.error('Failed to fetch scan results:', error);
+    
+    // If we can't get alerts, at least return an empty array instead of failing
+    if (error.response && error.response.status === 404) {
+      console.warn('Alerts endpoint returned 404 - no alerts found');
+      return [];
+    }
+    
+    console.error('Error details:', extractAxiosError(error));
     throw new Error(`Failed to fetch scan results: ${extractAxiosError(error)}`);
+  }
+};
+
+// Add URL to ZAP's context
+const addUrlToContext = async (url) => {
+  try {
+    // First, check if the URL is already in a context
+    try {
+      const contextResponse = await zapApi.get('/zap/JSON/context/view/contextList/');
+      const contextList = contextResponse.data.contextList || [];
+      
+      // Try to find an existing context
+      for (const contextName of contextList) {
+        try {
+          // Add URL to the existing context
+          await zapApi.get('/zap/JSON/context/action/includeInContext/', {
+            params: { 
+              contextName,
+              regex: `${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*`
+            }
+          });
+          return contextName;
+        } catch (e) {
+          // Continue to next context
+          continue;
+        }
+      }
+      
+      // If no context found, create a new one
+      const contextName = `scan-context-${Date.now()}`;
+      await zapApi.get('/zap/JSON/context/action/newContext/', {
+        params: { contextName }
+      });
+      
+      // Add the URL to the new context
+      await zapApi.get('/zap/JSON/context/action/includeInContext/', {
+        params: { 
+          contextName,
+          regex: `${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*`
+        }
+      });
+      
+      return contextName;
+    } catch (error) {
+      console.warn('Error managing context, using default scan parameters:', error);
+      return null;
+    }
+  } catch (error) {
+    console.warn('Failed to add URL to context, using default scan parameters:', error);
+    return null;
   }
 };
 
@@ -118,18 +215,30 @@ export const runSecurityScan = async (targetUrl, onProgressUpdate, isCancelled =
   // Normalize the target URL to ensure it's properly formatted
   const normalizeUrl = (url) => {
     try {
-      const urlObj = new URL(url);
+      // First clean the URL by removing any fragments
+      let cleanUrl = url.split('#')[0];
+      
+      // Parse the URL
+      const urlObj = new URL(cleanUrl);
+      
       // Ensure we have a protocol
       if (!urlObj.protocol) {
         urlObj.protocol = 'https:';
       }
-      return urlObj.toString();
+      
+      // For scanning purposes, we'll use just the origin + pathname
+      // This avoids issues with tracking parameters and session IDs
+      const baseUrl = `${urlObj.origin}${urlObj.pathname}`;
+      
+      console.log('Normalized URL:', { original: url, normalized: baseUrl });
+      return baseUrl;
     } catch (e) {
-      // If URL parsing fails, try to fix it
+      console.warn('Error normalizing URL, using as-is:', url, e);
+      // If URL parsing fails, try to fix common issues
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        return `https://${url}`;
+        return `https://${url.split('?')[0].split('#')[0]}`;
       }
-      return url;
+      return url.split('?')[0].split('#')[0];
     }
   };
 
@@ -196,29 +305,107 @@ export const runSecurityScan = async (targetUrl, onProgressUpdate, isCancelled =
       await new Promise(r => setTimeout(r, 500)); // Small delay for UX
     }
 
+    // Register the target URL with ZAP first
+    onProgressUpdate({ phase: 'setup', progress: 5, message: 'Registering URL with ZAP...' });
+    
+    // Extract base URL for scanning (without query parameters)
+    const urlObj = new URL(targetUrl);
+    const baseScanUrl = `${urlObj.origin}${urlObj.pathname}`;
+    
+    // First try to access the URL through ZAP
+    const accessUrl = async (url) => {
+      try {
+        console.log('Accessing URL to add it to the scan tree:', url);
+        const response = await zapApi.get('/zap/JSON/core/action/accessUrl/', {
+          params: { 
+            url: url,
+            followRedirects: 'true',
+            handleParameters: 'IGNORE_VALUE'
+          },
+          timeout: 15000
+        });
+        console.log('Successfully accessed URL:', url);
+        return true;
+      } catch (error) {
+        console.warn('Failed to access URL through ZAP:', url, error);
+        return false;
+      }
+    };
+    
+    // Try with the full URL first, then fall back to base URL
+    let urlAdded = await accessUrl(targetUrl);
+    if (!urlAdded && targetUrl !== baseScanUrl) {
+      console.log('Trying with base URL instead...');
+      urlAdded = await accessUrl(baseScanUrl);
+    }
+    
+    if (!urlAdded) {
+      console.warn('Could not access URL through ZAP, scan might fail');
+    }
+    
     // Start active scan
-    onProgressUpdate({ phase: 'scan', progress: 0, message: 'Starting active scan...' });
+    onProgressUpdate({ phase: 'scan', progress: 10, message: 'Starting active scan...' });
     
     if (isCancelled()) {
       throw new Error('Scan was cancelled');
     }
     
     // For quick scans, only scan the specific URL, not the whole context
-    const scanParams = isFullScan 
-      ? { 
-          url: targetUrl,
-          recurse: 'true',
-          inScopeOnly: 'true',
-          scanPolicyName: 'Default Policy'
-        }
-      : { 
-          url: targetUrl,
-          recurse: 'false',
-          inScopeOnly: 'true',
-          scanPolicyName: 'Default Policy'
-        };
+    const scanParams = {
+      url: baseScanUrl, // Use the base URL without query parameters
+      recurse: isFullScan ? 'true' : 'false',
+      inScopeOnly: 'false', // Set to false to avoid context issues
+      scanPolicyName: 'Default Policy',
+      method: 'GET',
+      postData: '',
+      contextId: '',
+      handleParameters: 'IGNORE_VALUE', // Ignore parameter values
+      scanHeadersAllRequests: 'true',
+      delayInMs: '0',
+      threadPerHost: '2'
+    };
     
-    const activeScanId = await startActiveScan(targetUrl, scanParams);
+    console.log('Starting scan with parameters:', {
+      ...scanParams,
+      url: baseScanUrl // Log the actual URL being scanned
+    });
+    
+    // Only try to use context for full scans
+    if (isFullScan) {
+      onProgressUpdate({ phase: 'setup', progress: 15, message: 'Preparing scan context...' });
+      try {
+        const contextName = await addUrlToContext(targetUrl);
+        if (contextName) {
+          scanParams.contextId = contextName;
+        }
+      } catch (error) {
+        console.warn('Proceeding without custom context:', error);
+      }
+    }
+    
+    // Add retry logic for starting the scan
+    const MAX_RETRIES = 3;
+    let retryCount = 0;
+    let activeScanId = null;
+    
+    while (retryCount < MAX_RETRIES && !activeScanId) {
+      try {
+        console.log(`Starting active scan (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+        activeScanId = await startActiveScan(baseScanUrl, scanParams);
+        console.log('Active scan started with ID:', activeScanId);
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= MAX_RETRIES) {
+          throw error; // Re-throw if we've exhausted all retries
+        }
+        
+        console.warn(`Attempt ${retryCount} failed, retrying in 2 seconds...`, error);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try to access the URL again before retrying
+        await accessUrl(baseScanUrl);
+      }
+    }
     
     // Monitor active scan progress with timeout
     let progress = 0;

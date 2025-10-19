@@ -25,13 +25,22 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
   // Use external isScanning if provided, otherwise use local state
   const scanning = externalIsScanning !== undefined ? externalIsScanning : isScanning;
   
+  // Get the correct setter function for scanning state
+  const setScanningState = externalIsScanning !== undefined ? onStartScan : setIsScanning;
+  
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Reset cancellation state when component unmounts
-      isCancelled.current = false;
+      // Cancel any ongoing scan when component unmounts
+      isCancelled.current = true;
+      // Reset scanning state
+      if (externalIsScanning !== undefined) {
+        onStartScan(false);
+      } else {
+        setIsScanning(false);
+      }
     };
-  }, []);
+  }, [externalIsScanning, onStartScan]);
 
   // URL validation function
   const isValidUrl = (urlString) => {
@@ -43,19 +52,56 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    console.log('Cancelling scan...');
     isCancelled.current = true;
     setScanMessage('Cancelling scan...');
-    // The actual cleanup will happen in the catch block of runSecurityScan
+    
+    try {
+      // Give some time for the scan to be cancelled
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Reset the UI state
+      await resetScanState();
+      
+      // Show feedback to the user
+      setError('Scan was cancelled by user');
+      
+      // Log the cancellation
+      console.log('Scan cancelled successfully');
+    } catch (err) {
+      console.error('Error during cancel:', err);
+      setError('Error cancelling scan: ' + (err.message || 'Unknown error'));
+    } finally {
+      // Ensure we always reset the scanning state
+      const resetState = async () => {
+        if (externalIsScanning !== undefined) {
+          await onStartScan(false);
+        } else {
+          setIsScanning(false);
+        }
+      };
+      
+      try {
+        await resetState();
+      } catch (error) {
+        console.error('Error resetting scan state:', error);
+      }
+    }
   };
 
-  const resetScanState = () => {
-    const setScanningState = externalIsScanning !== undefined ? onStartScan : setIsScanning;
-    setScanningState(false);
-    setScanProgress(0);
-    setScanPhase('');
-    setScanMessage('');
-    isCancelled.current = false;
+  const resetScanState = async () => {
+    try {
+      setScanProgress(0);
+      setScanPhase('');
+      setScanMessage('');
+      isCancelled.current = false;
+      
+      // Force a re-render to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 0));
+    } catch (err) {
+      console.error('Error resetting scan state:', err);
+    }
   };
 
   // Check if URL has been scanned before
@@ -68,6 +114,13 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
     e.preventDefault();
     setError("");
     isCancelled.current = false; // Reset cancellation state at the start of a new scan
+    
+    // Use the correct setter based on whether we're using external or internal state
+    if (externalIsScanning !== undefined) {
+      onStartScan(true);
+    } else {
+      setIsScanning(true);
+    }
 
     // Normalize URL
     const normalizeUrl = (url) => {
@@ -104,11 +157,7 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
       return;
     }
 
-    // Use the correct state setter based on whether we're using external or internal state
-    const setScanningState = externalIsScanning !== undefined ? onStartScan : setIsScanning;
-    
     try {
-      setScanningState(true);
       setScanProgress(0);
       setScanPhase('');
       setScanMessage('Initializing scan...');
@@ -118,9 +167,15 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
 
       // Progress update callback for ZAP API
       const onProgressUpdate = ({ phase, progress, message }) => {
-        setScanPhase(phase);
-        setScanProgress(progress);
-        setScanMessage(message);
+        // Ensure progress is always a number between 0 and 100
+        const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+        
+        // Use requestAnimationFrame for smoother updates
+        requestAnimationFrame(() => {
+          setScanPhase(phase || '');
+          setScanProgress(safeProgress);
+          setScanMessage(message || `Scanning... ${safeProgress}%`);
+        });
       };
 
       // Run the actual ZAP security scan
@@ -145,13 +200,17 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
           [cacheKey]: new Date().toISOString()
         }));
         
+        // Update progress to 100% before completing
+        setScanProgress(100);
+        setScanMessage('Scan completed successfully!');
+        
+        // Small delay to show 100% completion
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Call the parent's onStartScan with the results if it exists
         if (typeof onStartScan === 'function') {
           await onStartScan(normalizedUrl, scanResult);
         }
-        
-        setScanProgress(100);
-        setScanMessage('Scan completed successfully!');
       } catch (error) {
         if (!isCancelled.current) {
           // Only show error if it wasn't a cancellation
@@ -289,33 +348,38 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
             {scanning ? 'Scanning...' : 'Start Security Scan'}
           </button>
           
-          {scanning && (
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-6 py-3 rounded-lg font-orbitron font-semibold
-                        bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600
-                        text-white hover:shadow-lg hover:shadow-red-500/25
-                        transition-all duration-200 ease-in-out"
-            >
-              Cancel Scan
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={!scanning}
+            className={`px-6 py-3 rounded-lg font-orbitron font-semibold
+                      transition-all duration-200 ease-in-out
+                      ${scanning 
+                        ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 hover:shadow-lg hover:shadow-red-500/25' 
+                        : 'bg-gray-600 cursor-not-allowed opacity-50'}
+                      text-white`}
+          >
+            {scanning ? 'Cancel Scan' : 'Scan'}
+          </button>
         </div>
       </form>
 
-      {/* Progress bar */}
-      {scanning && (
-        <div className="mt-8">
-          <ProgressBar progress={scanProgress} />
-          <div className="mt-4 text-center">
-            <p className="text-cyan-400 text-sm font-medium">
-              {scanPhase && scanPhase.charAt(0).toUpperCase() + scanPhase.slice(1)} Phase
-            </p>
-            <p className="text-gray-400 text-sm mt-1">{scanMessage}</p>
-          </div>
-        </div>
-      )}
+      {/* Progress bar - Always in DOM but properly hidden when not scanning */}
+      <div className={`mt-8 transition-all duration-300 ${scanning ? 'opacity-100 visible' : 'opacity-0 invisible h-0'}`}>
+        {scanning && (
+          <>
+            <ProgressBar progress={scanProgress} />
+            <div className="mt-4 text-center">
+              <p className="text-cyan-400 text-sm font-medium">
+                {scanPhase ? `${scanPhase.charAt(0).toUpperCase() + scanPhase.slice(1)} Phase` : 'Initializing...'}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">
+                {scanMessage || 'Scan in progress...'}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

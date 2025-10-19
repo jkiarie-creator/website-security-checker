@@ -1,27 +1,54 @@
+import { Search, BarChart2, Save, FileText } from 'lucide-react';
+
 const features = [
-  { icon: "🔍", title: "Simple Scanning", desc: "Enter a URL and run a security scan instantly." },
-  { icon: "📊", title: "Clear Results", desc: "Issues grouped by severity: High, Medium, Low." },
-  { icon: "💾", title: "Save & Review", desc: "Keep a history of past scans for tracking." },
-  { icon: "📄", title: "Download Reports", desc: "Export results for documentation or sharing." }
+  { 
+    icon: <Search className="w-8 h-8 text-cyan-400" />, 
+    title: "Simple Scanning", 
+    desc: "Enter a URL and run a security scan instantly." 
+  },
+  { 
+    icon: <BarChart2 className="w-8 h-8 text-cyan-400" />, 
+    title: "Clear Results", 
+    desc: "Issues grouped by severity: High, Medium, Low." 
+  },
+  { 
+    icon: <Save className="w-8 h-8 text-cyan-400" />, 
+    title: "Save & Review", 
+    desc: "Keep a history of past scans for tracking." 
+  },
+  { 
+    icon: <FileText className="w-8 h-8 text-cyan-400" />, 
+    title: "Download Reports", 
+    desc: "Export results for documentation or sharing." 
+  }
 ];
 
 const FeaturesSection = () => (
-  <section className="py-16 bg-white/90 text-gray-900 border-y-4 border-blue-200">
-    <h3 className="text-3xl font-bold text-center mb-10 font-orbitron">
-      Why Use Website Security Checker?
-    </h3>
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
-      {features.map((f, idx) => (
-        <div
-          key={idx}
-          className="group p-6 bg-white rounded-xl shadow-lg transition-transform duration-300 transform hover:-translate-y-2 hover:shadow-2xl cursor-pointer flex flex-col items-center text-center border border-blue-200"
-        >
-          <div className="text-4xl mb-2">{f.icon}</div>
-          <h4 className="mt-2 text-lg font-semibold">{f.title}</h4>
-          <p className="text-gray-600 mt-2">{f.desc}</p>
-        </div>
-      ))}
+  <section className="py-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-center mb-16">
+        <h2 className="text-3xl font-bold font-orbitron text-white mb-4">Why Use Website Security Checker?</h2>
+        <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          Comprehensive security analysis for your web applications
+        </p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {features.map((feature, idx) => (
+          <div 
+            key={idx}
+            className="bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
+          >
+            <div className="w-12 h-12 bg-cyan-900/30 rounded-lg flex items-center justify-center mb-4 mx-auto">
+              {feature.icon}
+            </div>
+            <h3 className="text-xl font-semibold text-white text-center mb-2">{feature.title}</h3>
+            <p className="text-gray-300 text-center">{feature.desc}</p>
+          </div>
+        ))}
+      </div>
     </div>
   </section>
 );
+
 export default FeaturesSection;
