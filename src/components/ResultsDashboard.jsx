@@ -63,6 +63,21 @@ const ResultsDashboard = ({ results = [] }) => {
       )}
 
       {visibleSeverities.map((severity) => {
+              <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">
+                High: {totals.high}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
+                Medium: {totals.medium}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
+                Low: {totals.low}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {severityOrder.map((severity) => {
         const issues = groupedIssues[severity] || [];
         if (issues.length === 0) return null;
 
