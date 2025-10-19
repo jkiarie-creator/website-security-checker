@@ -15,21 +15,39 @@ const ResultsDashboard = ({ results = [] }) => {
 
   // Order of severity levels
   const severityOrder = ['high', 'medium', 'low'];
+  const totals = {
+    high: groupedIssues.high?.length || 0,
+    medium: groupedIssues.medium?.length || 0,
+    low: groupedIssues.low?.length || 0,
+  };
+  const totalFindings = results.length;
 
   return (
     <div className="space-y-8 p-6">
+      {totalFindings > 0 && (
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Scan Summary</h2>
+              <p className="text-sm text-gray-500">{totalFindings} total findings</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">
+                High: {totals.high}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
+                Medium: {totals.medium}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
+                Low: {totals.low}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {severityOrder.map((severity) => {
         const issues = groupedIssues[severity] || [];
-        
-        if (results.length === 0) {
-          return (
-            <div key="no-results" className="text-center py-12">
-              <h2 className="text-2xl font-semibold text-gray-600">No scan results available</h2>
-              <p className="text-gray-500 mt-2">Run a scan to see security issues</p>
-            </div>
-          );
-        }
-
         if (issues.length === 0) return null;
 
         return (
@@ -48,8 +66,8 @@ const ResultsDashboard = ({ results = [] }) => {
       
       {results.length === 0 && (
         <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold text-gray-600">No scan results available</h2>
-          <p className="text-gray-500 mt-2">Run a scan to see security issues</p>
+          <h2 className="text-2xl font-semibold text-gray-600">No scan results yet</h2>
+          <p className="text-gray-500 mt-2">Run a scan to view security issues grouped by severity.</p>
         </div>
       )}
     </div>
