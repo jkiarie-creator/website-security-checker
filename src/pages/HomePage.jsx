@@ -2,6 +2,7 @@ import { useState } from "react";
 import ScanForm from "../components/ScanForm";
 import ResultsDashboard from "../components/ResultsDashboard";
 import { mockScanResults } from "../mockData";
+import { addScanToHistory } from "../services/history";
 
 const HomePage = () => {
   const [scanComplete, setScanComplete] = useState(false);
@@ -18,6 +19,17 @@ const HomePage = () => {
         setScanResults(scanResult.results);
         setScanComplete(true);
         console.log("Scan completed with results:", scanResult.results);
+
+        // Save to history
+        const counts = scanResult.results.reduce(
+          (acc, r) => {
+            const sev = (r.severity || '').toLowerCase();
+            if (sev === 'high') acc.high += 1; else if (sev === 'medium') acc.medium += 1; else acc.low += 1;
+            return acc;
+          },
+          { high: 0, medium: 0, low: 0 }
+        );
+        addScanToHistory({ url, timestamp: Date.now(), counts });
       } else {
         // Fallback to mock data if ZAP API fails
         console.warn("ZAP API failed, using mock data");

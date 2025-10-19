@@ -97,6 +97,21 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4">
+      {error && (
+        <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-sm">{error}</p>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              className="text-xs underline hover:opacity-80"
+              aria-label="Dismiss error"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="relative">
           {/* URL Input with validation styling */}
