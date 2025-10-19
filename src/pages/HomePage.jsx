@@ -8,22 +8,26 @@ const HomePage = () => {
   const [scanResults, setScanResults] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleStartScan = async (url) => {
+  const handleStartScan = async (url, scanResult) => {
     console.log("Starting scan for:", url);
     setIsScanning(true);
     
-    // Simulate API call with mock data
     try {
-      // Actual API call made here 
-      // const results = await api.scanWebsite(url);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-      
-      // For now, use mock data
-      setScanResults(mockScanResults);
-      setScanComplete(true);
+      if (scanResult && scanResult.success) {
+        // Use real ZAP API results
+        setScanResults(scanResult.results);
+        setScanComplete(true);
+        console.log("Scan completed with results:", scanResult.results);
+      } else {
+        // Fallback to mock data if ZAP API fails
+        console.warn("ZAP API failed, using mock data");
+        setScanResults(mockScanResults);
+        setScanComplete(true);
+      }
     } catch (error) {
       console.error("Scan failed:", error);
-      // Handle error state here
+      // Handle error state here - could show error message to user
+      setScanResults([]);
     } finally {
       setIsScanning(false);
     }
