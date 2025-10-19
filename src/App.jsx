@@ -5,8 +5,6 @@ import LandingPage from "./pages/LandingPage";
 import HistoryPage from "./pages/HistoryPage";
 import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
-import TestResultsDashboard from "./pages/TestResultsDashboard";
-import TestIssueCard from "./pages/TestIssueCard";
 import Footer from "./components/Footer";
 
 function App() {

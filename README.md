@@ -20,7 +20,7 @@
   [![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fyourusername%2Fwebsite-security-checker)](https://twitter.com/intent/tweet?text=Check%20out%20this%20awesome%20security%20scanner%20built%20with%20React%20and%20OWASP%20ZAP%20API%20%F0%9F%9A%80%0A%0Ahttps%3A%2F%2Fgithub.com%2Fyourusername%2Fwebsite-security-checker)
 </div>
 
-## 🚀 Features
+## Features
 
 - **Comprehensive Security Scanning**
   - Cross-Site Scripting (XSS) detection
@@ -41,7 +41,7 @@
   - Custom scan configurations
   - API documentation integration
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 - **Frontend**
   - React 18+ with Hooks
@@ -59,7 +59,7 @@
   - Husky for Git hooks
   - Jest + React Testing Library
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -112,7 +112,7 @@
 5. **Access the application**
    Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## 📖 Documentation
+## Documentation
 
 ### Running ZAP Proxy
 1. Download and install [OWASP ZAP](https://www.zaproxy.org/download/)
@@ -129,7 +129,7 @@
 - `npm run lint` - Run linter
 - `npm run format` - Format code with Prettier
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
@@ -139,11 +139,11 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [OWASP ZAP](https://www.zaproxy.org/) for the amazing security scanning tool
 - [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
