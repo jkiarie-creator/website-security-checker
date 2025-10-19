@@ -69,6 +69,11 @@ const getScanResults = async (targetUrl) => {
 // Main scan function
 export const runSecurityScan = async (targetUrl, onProgressUpdate) => {
   try {
+    // Check if ZAP API is available
+    if (!baseURL || !apiKey) {
+      throw new Error('ZAP API configuration missing. Please check your environment variables.');
+    }
+
     // Start spider scan
     onProgressUpdate({ phase: 'spider', progress: 0, message: 'Starting spider scan...' });
     const spiderScanId = await runSpiderScan(targetUrl);
@@ -118,6 +123,12 @@ export const runSecurityScan = async (targetUrl, onProgressUpdate) => {
     };
   } catch (error) {
     console.error('Security scan failed:', error);
+    
+    // Check if it's a connection error
+    if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+      throw new Error('Cannot connect to ZAP API. Please ensure ZAP is running and accessible.');
+    }
+    
     throw new Error(error.message || 'Security scan failed');
   }
 };
