@@ -1,13 +1,15 @@
 import { useState } from "react";
 import PropTypes from 'prop-types';
 import ProgressBar from './ProgressBar';
-import TestIssueCard from "../pages/TestResultsDashboard";
+import { runSecurityScan } from '../services/zapApi';
 
 const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanPhase, setScanPhase] = useState('');
+  const [scanMessage, setScanMessage] = useState('');
   
   // Use external isScanning if provided, otherwise use local state
   const scanning = externalIsScanning !== undefined ? externalIsScanning : isScanning;
@@ -39,28 +41,57 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
 
     try {
       setIsScanning(true);
-      // Simulate progress updates (replace with actual scan progress)
-      const progressInterval = setInterval(() => {
-        setScanProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 1000);
+      setScanProgress(0);
+      setScanPhase('');
+      setScanMessage('Initializing scan...');
 
-      await onStartScan(url);
+      // Progress update callback for ZAP API
+      const onProgressUpdate = ({ phase, progress, message }) => {
+        setScanPhase(phase);
+        setScanProgress(progress);
+        setScanMessage(message);
+      };
+
+      // Run the actual ZAP security scan
+      const scanResult = await runSecurityScan(url, onProgressUpdate);
+      
+      // Call the parent's onStartScan with the results
+      await onStartScan(url, scanResult);
+      
       setScanProgress(100);
+      setScanMessage('Scan completed successfully!');
+      
+      // Reset after a short delay
       setTimeout(() => {
         setIsScanning(false);
         setScanProgress(0);
-      }, 1000);
+        setScanPhase('');
+        setScanMessage('');
+      }, 2000);
 
     } catch (err) {
-      setError("Failed to start scan. Please try again.");
+      console.error('Scan failed:', err);
+      
+      // More specific error messages based on error type
+      let errorMessage = "Failed to start scan. Please try again.";
+      
+      if (err.message.includes('Failed to start spider scan')) {
+        errorMessage = "Failed to start spider scan. Please check if ZAP is running and accessible.";
+      } else if (err.message.includes('Failed to start active scan')) {
+        errorMessage = "Failed to start security scan. Please try again.";
+      } else if (err.message.includes('Failed to fetch scan results')) {
+        errorMessage = "Scan completed but failed to fetch results. Please try again.";
+      } else if (err.message.includes('Network Error') || err.message.includes('ECONNREFUSED')) {
+        errorMessage = "Cannot connect to ZAP API. Please ensure ZAP is running on the configured URL.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setIsScanning(false);
       setScanProgress(0);
+      setScanPhase('');
+      setScanMessage('');
     }
   };
 
@@ -117,7 +148,12 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
       {scanning && (
         <div className="mt-8">
           <ProgressBar progress={scanProgress} />
-          <p className="mt-2 text-gray-400 text-sm text-center">Scanning in progress...</p>
+          <div className="mt-4 text-center">
+            <p className="text-cyan-400 text-sm font-medium">
+              {scanPhase && scanPhase.charAt(0).toUpperCase() + scanPhase.slice(1)} Phase
+            </p>
+            <p className="text-gray-400 text-sm mt-1">{scanMessage}</p>
+          </div>
         </div>
       )}
     </div>
