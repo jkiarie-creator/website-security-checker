@@ -1,7 +1,6 @@
 import { useState } from "react";
 import ScanForm from "../components/ScanForm";
 import ResultsDashboard from "../components/ResultsDashboard";
-import { mockScanResults } from "../mockData";
 import { addScanToHistory } from "../services/history";
 
 const HomePage = () => {
@@ -30,11 +29,6 @@ const HomePage = () => {
           { high: 0, medium: 0, low: 0 }
         );
         addScanToHistory({ url, timestamp: Date.now(), counts });
-      } else {
-        // Fallback to mock data if ZAP API fails
-        console.warn("ZAP API failed, using mock data");
-        setScanResults(mockScanResults);
-        setScanComplete(true);
       }
     } catch (error) {
       console.error("Scan failed:", error);
