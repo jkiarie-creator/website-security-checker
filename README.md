@@ -36,7 +36,7 @@
 
 - **Advanced Features**
   - Scan history with local storage
-  - Exportable reports (PDF/JSON)
+  - Exportable reports (PDF/JSON)(yet to be implemented)
   - Custom scan configurations
   - API documentation integration
 
@@ -90,11 +90,11 @@
    ```env
    # Frontend
    VITE_ZAP_API_KEY=your_zap_api_key
-   VITE_ZAP_BASE_URL=http://localhost:8080
+   VITE_ZAP_BASE_URL=http://localhost:8090
    
    # Server
    PORT=3001
-   ZAP_API_URL=http://localhost:8080
+   ZAP_API_URL=http://localhost:8090
    ZAP_API_KEY=your_zap_api_key
    ```
 
