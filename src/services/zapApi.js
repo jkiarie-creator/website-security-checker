@@ -15,14 +15,6 @@ const zapApi = axios.create({
   }
 });
 
-// Custom error for cancelled scans
-class ScanCancelledError extends Error {
-  constructor(message = 'Scan was cancelled') {
-    super(message);
-    this.name = 'ScanCancelledError';
-  }
-}
-
 /**
  * Helper function to poll a status endpoint until completion
  */
@@ -173,7 +165,6 @@ async function fetchAlerts(targetUrl) {
  * Main function to run a security scan using ZAP Quick Scan
  * @param {string} targetUrl - The target URL to scan
  * @param {function} onProgress - Callback for progress updates
- * @param {object} options - For backward compatibility (not used in this implementation)
  * @returns {Promise<Array>} - Array of alerts
  */
 export async function runSecurityScan(

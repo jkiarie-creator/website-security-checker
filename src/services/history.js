@@ -13,7 +13,7 @@ export const saveHistory = (entries) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   } catch {
-    // ignore write errors (storage full, etc.)
+
   }
 };
 

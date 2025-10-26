@@ -15,49 +15,23 @@ const HomePage = () => {
     setIsScanning(true);
     
     try {
-      // scanResult may be:
-      // - an array of alerts (from zapApi.runSecurityScan)
-      // - an object like { success: true, results: [...] }
-      // - undefined/false during intermediate control calls
-      if (!scanResult) {
-        return;
-      }
-
-      // Extract alerts array in a resilient way
-      const alerts = Array.isArray(scanResult)
-        ? scanResult
-        : (Array.isArray(scanResult.results) ? scanResult.results : []);
-
-      if (alerts.length === 0) {
-        setScanResults([]);
+      if (scanResult && scanResult.success) {
+        // Use real ZAP API results
+        setScanResults(scanResult.results);
         setScanComplete(true);
-        return;
+        console.log("Scan completed with results:", scanResult.results);
+
+        // Save to history
+        const counts = scanResult.results.reduce(
+          (acc, r) => {
+            const sev = (r.severity || '').toLowerCase();
+            if (sev === 'high') acc.high += 1; else if (sev === 'medium') acc.medium += 1; else acc.low += 1;
+            return acc;
+          },
+          { high: 0, medium: 0, low: 0 }
+        );
+        addScanToHistory({ url, timestamp: Date.now(), counts });
       }
-
-      // Normalize alerts to the shape ResultsDashboard expects
-      const normalized = alerts.map((a) => ({
-        title: a.name || a.title || '',
-        severity: (a.risk || a.severity || '').toLowerCase(),
-        description: a.description || a.summary || '',
-        confidence: a.confidence || '',
-        url: a.url || a.uri || ''
-      }));
-
-      // Use normalized results
-      setScanResults(normalized);
-      setScanComplete(true);
-      console.log("Scan completed with results:", normalized);
-
-      // Save to history
-      const counts = normalized.reduce(
-        (acc, r) => {
-          const sev = (r.severity || '').toLowerCase();
-          if (sev === 'high') acc.high += 1; else if (sev === 'medium') acc.medium += 1; else acc.low += 1;
-          return acc;
-        },
-        { high: 0, medium: 0, low: 0 }
-      );
-      addScanToHistory({ url, timestamp: Date.now(), counts });
     } catch (error) {
       console.error("Scan failed:", error);
       // Handle error state here - could show error message to user
@@ -90,7 +64,7 @@ const HomePage = () => {
           </div>
           
           <div className="bg-gray-800/50 p-8 rounded-xl border border-gray-700/50 shadow-lg">
-              <ScanForm onStartScan={handleStartScan} isScanning={isScanning} onScanningChange={setIsScanning} />
+            <ScanForm onStartScan={handleStartScan} isScanning={isScanning} />
           </div>
           
           <div className="mt-16 text-center">
