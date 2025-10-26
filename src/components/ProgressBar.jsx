@@ -1,9 +1,9 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 
-const ProgressBar = ({ progress = 0 }) => {
+const ProgressBar = ({ progress = 0, state = 'scanning' }) => {
   const [displayProgress, setDisplayProgress] = useState(0);
-  const [isScanning, setIsScanning] = useState(false);
+  const isScanning = state === 'scanning';
 
   // Smooth progress animation
   useEffect(() => {
@@ -19,11 +19,6 @@ const ProgressBar = ({ progress = 0 }) => {
 
     const animationFrame = requestAnimationFrame(animateProgress);
     return () => cancelAnimationFrame(animationFrame);
-  }, [progress]);
-
-  // Track scanning state for animations
-  useEffect(() => {
-    setIsScanning(progress > 0 && progress < 100);
   }, [progress]);
 
   return (
@@ -91,7 +86,8 @@ const ProgressBar = ({ progress = 0 }) => {
 };
 
 ProgressBar.propTypes = {
-  progress: PropTypes.number
+  progress: PropTypes.number,
+  state: PropTypes.oneOf(['scanning', 'completed', 'error'])
 };
 
 export default ProgressBar;

@@ -32,7 +32,6 @@
 - **User-Friendly Interface**
   - Real-time progress tracking
   - Interactive results dashboard
-  - Dark/light theme support
   - Responsive design for all devices
 
 - **Advanced Features**

@@ -166,7 +166,7 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
       await new Promise(resolve => setTimeout(resolve, 0));
 
       // Progress update callback for ZAP API
-      const onProgressUpdate = ({ phase, progress, message }) => {
+      const onProgressUpdate = ({ state, phase, progress, message }) => {
         // Ensure progress is always a number between 0 and 100
         const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
         
@@ -175,6 +175,13 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
           setScanPhase(phase || '');
           setScanProgress(safeProgress);
           setScanMessage(message || `Scanning... ${safeProgress}%`);
+          
+          // Update scanning state based on the state from ZAP API
+          if (state === 'completed') {
+            setScanningState(false);
+          } else if (state === 'scanning') {
+            setScanningState(true);
+          }
         });
       };
 
@@ -368,7 +375,7 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
       <div className={`mt-8 transition-all duration-300 ${scanning ? 'opacity-100 visible' : 'opacity-0 invisible h-0'}`}>
         {scanning && (
           <>
-            <ProgressBar progress={scanProgress} />
+            <ProgressBar progress={scanProgress} state={scanPhase ? 'scanning' : 'completed'} />
             <div className="mt-4 text-center">
               <p className="text-cyan-400 text-sm font-medium">
                 {scanPhase ? `${scanPhase.charAt(0).toUpperCase() + scanPhase.slice(1)} Phase` : 'Initializing...'}

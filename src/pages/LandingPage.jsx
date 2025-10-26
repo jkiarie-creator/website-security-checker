@@ -10,7 +10,7 @@ const LandingPage = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-cyan-900/20 text-cyan-400 text-sm font-medium mb-6 border border-cyan-500/30">
             <ShieldCheck className="w-5 h-5 mr-2" />
-            Web Security Scanner
+            Web Security Checker
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-orbitron bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 mb-6">
             Secure Your Web Presence

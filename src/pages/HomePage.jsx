@@ -15,23 +15,49 @@ const HomePage = () => {
     setIsScanning(true);
     
     try {
-      if (scanResult && scanResult.success) {
-        // Use real ZAP API results
-        setScanResults(scanResult.results);
-        setScanComplete(true);
-        console.log("Scan completed with results:", scanResult.results);
-
-        // Save to history
-        const counts = scanResult.results.reduce(
-          (acc, r) => {
-            const sev = (r.severity || '').toLowerCase();
-            if (sev === 'high') acc.high += 1; else if (sev === 'medium') acc.medium += 1; else acc.low += 1;
-            return acc;
-          },
-          { high: 0, medium: 0, low: 0 }
-        );
-        addScanToHistory({ url, timestamp: Date.now(), counts });
+      // scanResult may be:
+      // - an array of alerts (from zapApi.runSecurityScan)
+      // - an object like { success: true, results: [...] }
+      // - undefined/false during intermediate control calls
+      if (!scanResult) {
+        return;
       }
+
+      // Extract alerts array in a resilient way
+      const alerts = Array.isArray(scanResult)
+        ? scanResult
+        : (Array.isArray(scanResult.results) ? scanResult.results : []);
+
+      if (alerts.length === 0) {
+        setScanResults([]);
+        setScanComplete(true);
+        return;
+      }
+
+      // Normalize alerts to the shape ResultsDashboard expects
+      const normalized = alerts.map((a) => ({
+        title: a.name || a.title || '',
+        severity: (a.risk || a.severity || '').toLowerCase(),
+        description: a.description || a.summary || '',
+        confidence: a.confidence || '',
+        url: a.url || a.uri || ''
+      }));
+
+      // Use normalized results
+      setScanResults(normalized);
+      setScanComplete(true);
+      console.log("Scan completed with results:", normalized);
+
+      // Save to history
+      const counts = normalized.reduce(
+        (acc, r) => {
+          const sev = (r.severity || '').toLowerCase();
+          if (sev === 'high') acc.high += 1; else if (sev === 'medium') acc.medium += 1; else acc.low += 1;
+          return acc;
+        },
+        { high: 0, medium: 0, low: 0 }
+      );
+      addScanToHistory({ url, timestamp: Date.now(), counts });
     } catch (error) {
       console.error("Scan failed:", error);
       // Handle error state here - could show error message to user
@@ -53,10 +79,10 @@ const HomePage = () => {
           <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-cyan-900/20 text-cyan-400 text-sm font-medium mb-6 border border-cyan-500/30">
               <ShieldCheck className="w-5 h-5 mr-2" />
-              Web Security Scanner
+              Web Security Checker
             </div>
             <h1 className="text-4xl md:text-5xl font-bold font-orbitron bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 mb-6">
-              Website Security Scanner
+              Website Security Checker
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-10">
               Enter a URL to scan for security vulnerabilities and protect your online presence.
@@ -64,7 +90,7 @@ const HomePage = () => {
           </div>
           
           <div className="bg-gray-800/50 p-8 rounded-xl border border-gray-700/50 shadow-lg">
-            <ScanForm onStartScan={handleStartScan} isScanning={isScanning} />
+              <ScanForm onStartScan={handleStartScan} isScanning={isScanning} onScanningChange={setIsScanning} />
           </div>
           
           <div className="mt-16 text-center">

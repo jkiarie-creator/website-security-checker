@@ -18,8 +18,8 @@ const Navbar = () => {
           <Link to="/about" className="text-white hover:text-[#38bdf8] transition-colors duration-200">
             About
           </Link>
-          <Link to="/home" className="text-white hover:text-[#38bdf8] transition-colors duration-200">
-            Get started
+          <Link to="/history" className="text-white hover:text-[#38bdf8] transition-colors duration-200">
+            History
           </Link>
         </div>
       </div>

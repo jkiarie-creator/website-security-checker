@@ -6,7 +6,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const ZAP_API_URL = process.env.ZAP_API_URL || 'http://localhost:8080';
+const ZAP_API_URL = process.env.ZAP_API_URL || 'http://localhost:8090';
 const ZAP_API_KEY = process.env.ZAP_API_KEY;
 
 // Rate limiting to prevent abuse
@@ -36,8 +36,17 @@ app.get('/health', (req, res) => {
 const zapProxy = createProxyMiddleware({
   target: ZAP_API_URL,
   changeOrigin: true,
+  secure: false, // Allow self-signed certificates
   pathRewrite: {
     '^/zap': '' // Remove /zap prefix when forwarding to ZAP
+  },
+  // Disable SSL certificate validation
+  ssl: { rejectUnauthorized: false },
+  // Add headers to help with HTTPS
+  headers: {
+    'Connection': 'keep-alive',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept': '*/*'
   },
   onProxyReq: (proxyReq, req, res) => {
     // Add API key to all requests if it's set
