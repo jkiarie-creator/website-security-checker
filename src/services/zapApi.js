@@ -3,7 +3,35 @@ import axios from 'axios';
 // ZAP API configuration
 const ZAP_BASE_URL = 'http://localhost:3001/zap';
 const POLL_INTERVAL = 2000; // 2 seconds
-const REQUEST_TIMEOUT = 30000; // 30 seconds
+// Request timeout for axios calls to the local ZAP proxy.
+// Default to 0 (no timeout) to allow long-running scans; can be overridden
+// by setting an environment variable. In the browser (Vite) use
+// VITE_ZAP_REQUEST_TIMEOUT; in Node use ZAP_REQUEST_TIMEOUT.
+const REQUEST_TIMEOUT = (() => {
+  try {
+    // Vite exposes variables via import.meta.env.VITE_* in the client
+    const viteVal = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ZAP_REQUEST_TIMEOUT;
+    if (viteVal !== undefined && viteVal !== null && viteVal !== '') {
+      const parsed = Number(viteVal);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+  } catch (e) {
+    // import.meta may not be available in some environments; ignore
+  }
+
+  // Fallback to Node-style env (for server-side usage)
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.ZAP_REQUEST_TIMEOUT) {
+      const parsed = Number(process.env.ZAP_REQUEST_TIMEOUT);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Default: 0 = no timeout
+  return 0;
+})();
 
 // Create Axios instance with base configuration
 const zapApi = axios.create({
@@ -147,7 +175,7 @@ async function fetchAlerts(targetUrl) {
     // Transform alerts to consistent format
     return (data.alerts || []).map(alert => ({
       id: alert.id,
-      name: alert.name,
+      name: alert.alert,
       risk: alert.risk,
       confidence: alert.confidence,
       url: alert.url,

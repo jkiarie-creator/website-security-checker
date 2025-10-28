@@ -1,15 +1,27 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import IssueCard from './IssueCard';
 
 const ResultsDashboard = ({ results = [] }) => {
-  // Group issues by severity
+  // Group issues by severity (defensive: handle missing/non-string severity)
   const groupedIssues = results.reduce((acc, issue) => {
-    const severity = issue.severity.toLowerCase();
+    // Ensure severity is a string and normalize it; unknown values map to 'low'
+    let severity = (issue && issue.severity) ? String(issue.severity).toLowerCase() : 'low';
+    if (!['high', 'medium', 'low'].includes(severity)) {
+      severity = 'low';
+    }
     if (!acc[severity]) {
       acc[severity] = [];
     }
-    acc[severity].push(issue);
+    // Push a normalized copy so downstream components (IssueCard) always have
+    // a string severity and safe defaults for common fields.
+    acc[severity].push({
+      ...issue,
+      severity,
+      title: issue?.title || issue?.name || 'Untitled issue',
+      description: issue?.description || '',
+      url: issue?.url || issue?.uri || ''
+    });
     return acc;
   }, {});
 
@@ -34,16 +46,16 @@ const ResultsDashboard = ({ results = [] }) => {
   return (
     <div className="space-y-8 p-6">
       {totalFindings > 0 && (
-        <div className="rounded-lg border border-muted-200 bg-card p-4 shadow-sm">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-muted-700">Scan Summary</h2>
-              <p className="text-sm text-muted-500">{totalFindings} total findings</p>
+              <h2 className="text-xl font-bold text-gray-900">Scan Summary</h2>
+              <p className="text-sm text-gray-500">{totalFindings} total findings</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-danger-50 px-3 py-1 text-sm font-medium text-danger-700">High: {totals.high}</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-warning-50 px-3 py-1 text-sm font-medium text-warning-700">Medium: {totals.medium}</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-success-50 px-3 py-1 text-sm font-medium text-success-700">Low: {totals.low}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">High: {totals.high}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">Medium: {totals.medium}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">Low: {totals.low}</span>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -52,7 +64,7 @@ const ResultsDashboard = ({ results = [] }) => {
                 key={key}
                 type="button"
                 onClick={() => setActiveFilter(key)}
-                className={`px-3 py-1 rounded-full text-sm border transition ${activeFilter === key ? 'bg-primary-600 text-white border-primary-600' : 'bg-card text-muted-700 border-muted-200 hover:bg-bg'}`}
+                className={`px-3 py-1 rounded-full text-sm border transition ${activeFilter === key ? 'bg-cyan-600 text-white border-cyan-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                 aria-pressed={activeFilter === key}
               >
                 {key === 'all' ? 'All' : key.charAt(0).toUpperCase() + key.slice(1)}
@@ -69,13 +81,13 @@ const ResultsDashboard = ({ results = [] }) => {
         return (
           <div key={severity} className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-muted-700 capitalize">
+              <h2 className="text-2xl font-bold text-gray-900 capitalize">
                 {severity} Severity Issues ({issues.length})
               </h2>
               <button
                 type="button"
                 onClick={() => setCollapsed((c) => ({ ...c, [severity]: !c[severity] }))}
-                className="text-sm text-primary-700 hover:text-primary-800"
+                className="text-sm text-cyan-700 hover:text-cyan-800"
                 aria-expanded={!collapsed[severity]}
                 aria-controls={`section-${severity}`}
               >
@@ -95,8 +107,8 @@ const ResultsDashboard = ({ results = [] }) => {
       
       {results.length === 0 && (
         <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold text-muted-500">No scan results yet</h2>
-          <p className="text-muted-500 mt-2">Run a scan to view security issues grouped by severity.</p>
+          <h2 className="text-2xl font-semibold text-gray-600">No scan results yet</h2>
+          <p className="text-gray-500 mt-2">Run a scan to view security issues grouped by severity.</p>
         </div>
       )}
     </div>

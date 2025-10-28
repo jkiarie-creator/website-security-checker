@@ -72,8 +72,9 @@ const zapProxy = createProxyMiddleware({
     });
   },
   logLevel: 'debug',
-  // Timeout after 30 seconds
-  timeout: 30000,
+  // Allow long-running ZAP operations (do not force a short proxy timeout)
+  timeout: 0,
+  proxyTimeout: 0,
   // Don't follow redirects
   followRedirects: false,
   // Don't retry failed requests
@@ -89,9 +90,27 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`ZAP Proxy Server running on http://localhost:${PORT}`);
   console.log(`Proxying requests to: ${ZAP_API_URL}`);
 });
+
+// Remove any server-side timeouts to allow very long-running ZAP operations.
+// Setting to 0 disables the automatic timeout behavior.
+try {
+  // Disable socket timeout (no automatic socket idle timeout)
+  server.timeout = 0;
+
+  // Disable keep-alive timeout (so connections aren't closed by the server)
+  server.keepAliveTimeout = 0;
+
+  // Disable headers timeout to avoid Node closing slow requests while headers are being received
+  // Note: headersTimeout should be >= keepAliveTimeout in normal cases; setting both to 0 fully disables
+  server.headersTimeout = 0;
+
+  console.log('Server timeouts disabled: server.timeout, server.keepAliveTimeout, server.headersTimeout set to 0');
+} catch (err) {
+  console.warn('Failed to modify server timeout settings:', err && err.message);
+}
 
 module.exports = app;

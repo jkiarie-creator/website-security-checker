@@ -151,7 +151,12 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
     if (cachedResult) {
       setScanMessage('Loading cached scan results...');
       await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
-      onStartScan(normalizedUrl, cachedResult);
+      // Ensure cached result is always wrapped as { success: true, results: [...] }
+      let safeResult = cachedResult;
+      if (!cachedResult.success || !Array.isArray(cachedResult.results)) {
+        safeResult = { success: true, results: Array.isArray(cachedResult) ? cachedResult : (cachedResult.results || cachedResult.alerts || []) };
+      }
+      onStartScan(normalizedUrl, safeResult);
       setScanMessage('Loaded from cache');
       setTimeout(() => setScanMessage(''), 2000);
       return;
