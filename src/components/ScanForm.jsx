@@ -9,7 +9,7 @@ const scanCache = new Map();
 // Generate a cache key from URL and scan type
 const getCacheKey = (url, isFullScan) => `${url}::${isFullScan ? 'full' : 'quick'}`;
 
-const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
+const ScanForm = ({ onStartScan, isScanning: externalIsScanning, setIsScanning: externalSetIsScanning }) => {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
@@ -25,22 +25,35 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
   // Use external isScanning if provided, otherwise use local state
   const scanning = externalIsScanning !== undefined ? externalIsScanning : isScanning;
   
-  // Get the correct setter function for scanning state
-  const setScanningState = externalIsScanning !== undefined ? onStartScan : setIsScanning;
+  // Get the correct setter function for scanning state. Prefer an explicit setter passed by the parent
+  // (`externalSetIsScanning`) to avoid overloading `onStartScan` (which is used for scan results).
+  // Fallback to the old behavior for backward compatibility.
+  const setScanningState = externalIsScanning !== undefined
+    ? (typeof externalSetIsScanning === 'function' ? externalSetIsScanning : onStartScan)
+    : setIsScanning;
   
-  // Cleanup on unmount
+  // Cleanup on unmount only. Previously this effect re-ran when parent props changed
+  // which inadvertently set `isCancelled.current = true` during normal scanning updates.
+  // Using an empty deps array ensures the cleanup runs only when the component unmounts.
   useEffect(() => {
     return () => {
       // Cancel any ongoing scan when component unmounts
       isCancelled.current = true;
-      // Reset scanning state
-      if (externalIsScanning !== undefined) {
-        onStartScan(false);
-      } else {
-        setIsScanning(false);
+      // Reset scanning state using the chosen setter
+      try {
+        if (externalIsScanning !== undefined) {
+          if (typeof externalSetIsScanning === 'function') externalSetIsScanning(false);
+          else if (typeof onStartScan === 'function') onStartScan(false);
+        } else {
+          setIsScanning(false);
+        }
+      } catch (err) {
+        // swallow errors in cleanup
+        console.error('Error resetting scanning state on unmount:', err);
       }
     };
-  }, [externalIsScanning, onStartScan]);
+    // Intentionally empty deps: we only want cleanup on unmount, not when parent props change.
+  }, []);
 
   // URL validation function
   const isValidUrl = (urlString) => {
@@ -76,7 +89,8 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
       // Ensure we always reset the scanning state
       const resetState = async () => {
         if (externalIsScanning !== undefined) {
-          await onStartScan(false);
+          if (typeof externalSetIsScanning === 'function') await externalSetIsScanning(false);
+          else if (typeof onStartScan === 'function') await onStartScan(false);
         } else {
           setIsScanning(false);
         }
@@ -117,7 +131,8 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
     
     // Use the correct setter based on whether we're using external or internal state
     if (externalIsScanning !== undefined) {
-      onStartScan(true);
+      if (typeof externalSetIsScanning === 'function') externalSetIsScanning(true);
+      else if (typeof onStartScan === 'function') onStartScan(true);
     } else {
       setIsScanning(true);
     }
@@ -336,7 +351,7 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
                 <span className="sr-only">Toggle scan type</span>
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
-                    isFullScan ? 'translate-x-5' : 'translate-x-0.5'
+                    isFullScan ? 'translate-x-4' : 'translate-x-0.8'
                   }`}
                 />
               </button>
@@ -399,6 +414,7 @@ const ScanForm = ({ onStartScan, isScanning: externalIsScanning }) => {
 ScanForm.propTypes = {
   onStartScan: PropTypes.func.isRequired,
   isScanning: PropTypes.bool,
+  setIsScanning: PropTypes.func,
 };
 
 export default ScanForm;

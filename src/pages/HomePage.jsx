@@ -64,7 +64,7 @@ const HomePage = () => {
           </div>
           
           <div className="bg-gray-800/50 p-8 rounded-xl border border-gray-700/50 shadow-lg">
-            <ScanForm onStartScan={handleStartScan} isScanning={isScanning} />
+            <ScanForm onStartScan={handleStartScan} isScanning={isScanning} setIsScanning={setIsScanning} />
           </div>
           
           <div className="mt-16 text-center">

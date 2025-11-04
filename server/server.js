@@ -59,6 +59,20 @@ const zapProxy = createProxyMiddleware({
     // Log the request
     console.log(`Proxying: ${req.method} ${req.path} -> ${ZAP_API_URL}${proxyReq.path}`);
   },
+  // Ensure proxied responses include CORS headers so the browser accepts them
+  onProxyRes: (proxyRes, req, res) => {
+    try {
+      // Set permissive CORS headers; in production consider restricting origin
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,apikey,Accept');
+      // Allow credentials if needed by the client
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } catch (err) {
+      // Non-fatal: log and continue
+      console.warn('Failed to set CORS headers on proxied response:', err && err.message);
+    }
+  },
   onError: (err, req, res) => {
     console.error('Proxy error:', err);
     res.status(500).json({ 
@@ -82,6 +96,8 @@ const zapProxy = createProxyMiddleware({
 });
 
 // Apply proxy to all /zap/* routes
+// Make sure preflight OPTIONS requests are answered before proxying to avoid CORS preflight failures
+app.options('/zap/*', cors());
 app.use('/zap', zapProxy);
 
 // Error handling middleware
